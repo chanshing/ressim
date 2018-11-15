@@ -1,3 +1,4 @@
+import numpy
 from numpy import array, asarray, copy, zeros, ones, maximum, minimum
 from scipy.sparse import spdiags
 from scipy.sparse.linalg import spsolve
@@ -97,7 +98,7 @@ class PressureSolver(object):
 
     @k.setter
     def k(self, k):
-        assert all(k > 0), "Invalid negative permeability. Perhaps forgot to exp(k)?"
+        assert numpy.all(k > 0), "Invalid negative permeability. Perhaps forgot to exp(k)?"
         self.__k = k
 
     @property
