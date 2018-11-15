@@ -5,7 +5,6 @@ from scipy.sparse.linalg import spsolve
 
 import warnings
 
-# from . import utils
 import utils
 
 class Grid(object):
@@ -32,11 +31,8 @@ class Grid(object):
         self.nx, self.ny = nx, ny
         self.lx, self.ly = float(lx), float(ly)
 
-        # number of cells
         self.ncell = nx*ny
-        # cell dimensions
         self.dx, self.dy = self.lx/nx, self.ly/ny
-        # cell volume
         self.vol = self.dx*self.dy
 
 class PressureSolver(object):
@@ -54,7 +50,7 @@ class PressureSolver(object):
     q : ndarray, shape (ny, nx) | (ny*nx,)
         Integrated source term.
 
-    diriBC : list of (int, float) tuples, optional
+    diri : list of (int, float) tuples, optional
         Dirichlet boundary conditions, e.g. [(i1, val1), (i2, val2), ...] means pressure values val1 at cell i1, val2 at cell i2, etc.
         Defaults to [(ny*nx/2, 0.0)], i.e. zero pressure at center of the grid.
 
@@ -83,11 +79,10 @@ class PressureSolver(object):
     update(**params) :
         Update parameters of the solver. Use to update s (saturation) during transient multiphase flow simulations, e.g. update(s=s_new)
 
-
     """
-    def __init__(self, grid, k, q, diriBC=None, mobi_fn=None, s=None):
+    def __init__(self, grid, k, q, diri=None, mobi_fn=None, s=None):
         self.grid, self.k, self.q = grid, k, q
-        self.diriBC = diriBC
+        self.diri = diri
         self.mobi_fn, self.s = mobi_fn, s
 
         self.p, self.v = None, None
@@ -102,15 +97,15 @@ class PressureSolver(object):
         self.__k = k
 
     @property
-    def diriBC(self):
-        return self.__diriBC
+    def diri(self):
+        return self.__diri
 
-    @diriBC.setter
-    def diriBC(self, diriBC):
+    @diri.setter
+    def diri(self, diri):
         """ default is zero at center of the grid """
-        if diriBC is None:
+        if diri is None:
             n = self.grid.ncell
-            self.__diriBC = [(int(n/2), 0.0)]
+            self.__diri = [(int(n/2), 0.0)]
 
     def update(self, **params):
         self.__dict__.update(params)
@@ -128,7 +123,7 @@ class PressureSolver(object):
 
         mat, tx, ty = transmi(grid, k)
         q = copy(self.q).ravel()
-        impose_diriBC(mat, q, self.diriBC)  # inplace op on mat, q
+        impose_diri(mat, q, self.diri)  # inplace op on mat, q
 
         # pressure
         p = spsolve(mat, q)
@@ -179,7 +174,7 @@ def convecti(grid, v):
 
     return mat
 
-def impose_diriBC(mat, q, diriBC):
+def impose_diri(mat, q, diri):
     """
     Impose Dirichlet boundary conditions. NOTE: inplace operation on mat, q
     For example, to impose a pressure value 99 at the first cell:
@@ -191,7 +186,7 @@ def impose_diriBC(mat, q, diriBC):
 
     q = [99 q2 ... qn]
     """
-    for i, val in diriBC:
+    for i, val in diri:
         utils.csr_row_set_nz_to_val(mat, i, 0.0)
         mat[i,i] = 1.0
         q[i] = val
