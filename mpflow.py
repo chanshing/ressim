@@ -8,61 +8,35 @@ import warnings
 import utils
 
 class Grid(object):
+    """
+    Simple rectangular grid.
+
+    Parameters
+    ----------
+    nx, ny : int, int
+        Grid resolution
+    lx, ly : float, float, optional
+        Grid physical dimensions. Defaults to lx=1.0, ly=1.0 (unit square)
+
+    Attributes
+    ----------
+    vol : float
+        cell volume
+    dx, dy : float, float
+        cell dimensions
+    ncell : int
+        number of cells
+    """
     def __init__(self, nx, ny, lx=1.0, ly=1.0):
         self.nx, self.ny = nx, ny
-        self.ncell = nx*ny
         self.lx, self.ly = float(lx), float(ly)
+
+        # number of cells
+        self.ncell = nx*ny
         # cell dimensions
         self.dx, self.dy = self.lx/nx, self.ly/ny
         # cell volume
         self.vol = self.dx*self.dy
-
-def transmi(grid, k):
-    """ construct transmisibility matrix """
-    nx, ny = grid.nx, grid.ny
-    dx, dy = grid.dx, grid.dy
-    n = grid.ncell
-
-    kinv = 1.0/k
-
-    ax = 2*dy/dx; tx = zeros((ny,nx+1))
-    ay = 2*dx/dy; ty = zeros((ny+1,nx))
-
-    tx[:,1:nx] = ax/(kinv[:,0:nx-1]+kinv[:,1:nx])
-    ty[1:ny,:] = ay/(kinv[0:ny-1,:]+kinv[1:ny,:])
-
-    x1 = tx[:,0:nx].reshape(n); x2 = tx[:,1:nx+1].reshape(n)
-    y1 = ty[0:ny,:].reshape(n); y2 = ty[1:ny+1,:].reshape(n)
-
-    data = [-y2, -x2, x1+x2+y1+y2, -x1, -y1]
-    diags = [-nx, -1, 0, 1, nx]
-    mat = spdiags(data, diags, n, n, format='csr')
-
-    return mat, tx, ty
-
-def convecti(grid, v):
-    """ construct convection matrix with upwind scheme """
-    nx, ny = grid.nx, grid.ny
-    n = grid.ncell
-
-    xn = minimum(v['x'], 0); x1 = xn[:,:,0:nx].reshape(n)
-    yn = minimum(v['y'], 0); y1 = yn[:,0:ny,:].reshape(n)
-    xp = maximum(v['x'], 0); x2 = xp[:,:,1:nx+1].reshape(n)
-    yp = maximum(v['y'], 0); y2 = yp[:,1:ny+1,:].reshape(n)
-
-    data = [-y2, -x2, x2-x1+y2-y1, x1, y1]
-    diags = [-nx, -1, 0, 1, nx]
-    mat = spdiags(data, diags, n, n, format='csr')
-
-    return mat
-
-def impose_diriBC(mat, q, diriBC):
-    """ Impose Dirichlet BC. Note: inplace operation on mat, q """
-    for i, val in diriBC:
-        utils.csr_row_set_nz_to_val(mat, i, 0.0)
-        mat[i,i] = 1.0
-        q[i] = val
-    mat.eliminate_zeros()
 
 class PressureSolver(object):
     """
@@ -89,13 +63,25 @@ class PressureSolver(object):
     s : ndarray, shape (ny, nx) | (ny*nx,), optional
         Saturation
 
+    Attributes
+    ----------
+    p : ndarray, shape (ny, nx)
+        Pressure
+
+    v : dict of ndarray
+        'x' : ndarray, shape (ny, nx+1)
+            Flux in x-direction
+        'y' : ndarray, shape (ny+1, nx)
+            Flux in y-direction
+
     Methods
     -------
     step() :
         Main method that solves the pressure equation to obtain pressure and flux, stored at self.p and self.v
 
     update(**params) :
-        Update parameters of the solver. Use to update s (saturation) in transient multiphase flow.
+        Update parameters of the solver. Use to update s (saturation) during transient multiphase flow simulations, e.g. update(s=s_new)
+
 
     """
     def __init__(self, grid, k, q, diriBC=None, mobi_fn=None, s=None):
@@ -147,8 +133,65 @@ class PressureSolver(object):
         p = spsolve(mat, q)
         p = p.reshape(ny, nx)
         # flux
-        v = {}
-        v['x'] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
-        v['y'] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
+        v = {'x':zeros((ny,nx+1)), 'y':zeros((ny+1,nx))}
+        v['x'][:,1:nx] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
+        v['y'][1:ny,:] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
 
         self.p, self.v = p, v
+
+def transmi(grid, k):
+    """ construct transmisibility matrix """
+    nx, ny = grid.nx, grid.ny
+    dx, dy = grid.dx, grid.dy
+    n = grid.ncell
+
+    kinv = 1.0/k
+
+    ax = 2*dy/dx; tx = zeros((ny,nx+1))
+    ay = 2*dx/dy; ty = zeros((ny+1,nx))
+
+    tx[:,1:nx] = ax/(kinv[:,0:nx-1]+kinv[:,1:nx])
+    ty[1:ny,:] = ay/(kinv[0:ny-1,:]+kinv[1:ny,:])
+
+    x1 = tx[:,0:nx].reshape(n); x2 = tx[:,1:nx+1].reshape(n)
+    y1 = ty[0:ny,:].reshape(n); y2 = ty[1:ny+1,:].reshape(n)
+
+    data = [-y2, -x2, x1+x2+y1+y2, -x1, -y1]
+    diags = [-nx, -1, 0, 1, nx]
+    mat = spdiags(data, diags, n, n, format='csr')
+
+    return mat, tx, ty
+
+def convecti(grid, v):
+    """ construct convection matrix with upwind scheme """
+    nx, ny = grid.nx, grid.ny
+    n = grid.ncell
+
+    xn = minimum(v['x'], 0); x1 = xn[:,:,0:nx].reshape(n)
+    yn = minimum(v['y'], 0); y1 = yn[:,0:ny,:].reshape(n)
+    xp = maximum(v['x'], 0); x2 = xp[:,:,1:nx+1].reshape(n)
+    yp = maximum(v['y'], 0); y2 = yp[:,1:ny+1,:].reshape(n)
+
+    data = [-y2, -x2, x2-x1+y2-y1, x1, y1]
+    diags = [-nx, -1, 0, 1, nx]
+    mat = spdiags(data, diags, n, n, format='csr')
+
+    return mat
+
+def impose_diriBC(mat, q, diriBC):
+    """
+    Impose Dirichlet boundary conditions. NOTE: inplace operation on mat, q
+    For example, to impose a pressure value 99 at the first cell:
+
+    mat = [[  1   0  ...  0  ]
+           [ a21 a22 ... a2n ]
+           ...
+           [ an1 an2 ... ann ]]
+
+    q = [99 q2 ... qn]
+    """
+    for i, val in diriBC:
+        utils.csr_row_set_nz_to_val(mat, i, 0.0)
+        mat[i,i] = 1.0
+        q[i] = val
+    mat.eliminate_zeros()
