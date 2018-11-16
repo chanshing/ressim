@@ -2,6 +2,7 @@ import numpy
 from numpy import array, asarray, copy, zeros, ones, maximum, minimum
 from scipy.sparse import spdiags
 from scipy.sparse.linalg import spsolve
+from scipy import optimize
 
 import warnings
 
@@ -78,8 +79,12 @@ class PressureSolver(object):
     """
     def __init__(self, grid, k, q, mobi=1.0, diri=None):
         self.grid, self.k, self.q = grid, k, q
-        self.diri = diri
         self.mobi = mobi
+
+        if diri is None:
+            # zero at center of the grid
+            n = self.grid.ncell
+            self.diri = [(int(n/2), 0.0)]
 
         self.p, self.v = None, None
 
@@ -89,19 +94,17 @@ class PressureSolver(object):
 
     @k.setter
     def k(self, k):
-        assert numpy.all(k > 0), "Invalid negative permeability. Perhaps forgot to exp(k)?"
+        assert numpy.all(k > 0), "Encountered negative permeability. Perhaps forgot to exp(k)?"
         self.__k = k
 
     @property
-    def diri(self):
-        return self.__diri
+    def mobi(self):
+        return self.__mobi
 
-    @diri.setter
-    def diri(self, diri):
-        """ default is zero at center of the grid """
-        if diri is None:
-            n = self.grid.ncell
-            self.__diri = [(int(n/2), 0.0)]
+    @mobi.setter
+    def mobi(self, mobi):
+        assert numpy.all(mobi > 0), "Encountered negative mobility"
+        self.__mobi = mobi
 
     def step(self):
         grid, k = self.grid, self.k
@@ -114,7 +117,7 @@ class PressureSolver(object):
         k = k * mobi
 
         mat, tx, ty = transmi(grid, k)
-        q = copy(self.q).ravel()
+        q = copy(self.q).reshape(grid.ncell)
         impose_diri(mat, q, self.diri)  # inplace op on mat, q
 
         # pressure
@@ -125,10 +128,40 @@ class PressureSolver(object):
         v['x'][:,1:nx] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
         v['y'][1:ny,:] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
 
-        self.p, self.v = p, v
+        self.p, self.v = p, v  # update p, v
 
-# def SaturationSolver(object):
-#     def __init__(self, grid, v, q, s_init=None, frac_fn=None, **frac_kws):
+class SaturationSolver(object):
+    def __init__(self, s, grid, v, q, phi, frac_fn=None):
+        self.s, self.grid, self.v, self.q, self.phi = s, grid, v, q, phi
+
+        if frac_fn is None:
+            # single phase flow
+            self.frac_fn = lambda s: s
+
+    @staticmethod
+    def qw(q, frac):
+        # water injection, mixed production
+        return maximum(q) + frac*minimum(q)
+
+    def step(self, dt):
+        s, grid, v, q, phi = self.s, self.grid, self.v, self.q, self.phi
+        frac_fn = self.frac_fn
+
+        alpha = float(dt) / (grid.vol * phi)
+        mat = convecti(grid, v)
+
+        s = s.reshape(grid.ncell)
+        q = q.reshape(grid.ncell)
+        if isinstance(alpha, numpy.ndarray):
+            alpha = alpha.reshape(grid.ncenll)
+
+        def residual(s1):
+            frac = frac_fn(s1)
+            qw = self.qw(q, frac)
+            return s1 - s + alpha * (mat.dot(frac) - qw)
+        sol = optimize.root(residual, x0=s, method='krylov')
+
+        self.s = sol.x.reshape(grid.ny, grid.nx)  # update s
 
 def transmi(grid, k):
     """ construct transmisibility matrix """
