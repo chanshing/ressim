@@ -133,12 +133,11 @@ class PressureSolver(object):
 
 class SaturationSolver(object):
     def __init__(self, grid, q, phi, s, v=None, frac_fn=None):
-        self.grid, self.q, self.phi, self.s = grid, v, q, phi, s
+        self.grid, self.q, self.phi, self.s = grid, q, phi, s
         self.v = v
 
-        if frac_fn is None:
-            # single phase flow
-            self.frac_fn = lambda s: s
+        # defaults to single phase flow
+        self.frac_fn = lambda s: s if frac_fn is None else frac_fn
 
     @staticmethod
     def qw(q, frac):
@@ -146,7 +145,7 @@ class SaturationSolver(object):
         return maximum(q) + frac*minimum(q)
 
     def step(self, dt):
-        grid, q, phi, s = self.grid, self.v, self.q, self.phi, self.s
+        grid, q, phi, s = self.grid, self.q, self.phi, self.s
         v = self.v
         frac_fn = self.frac_fn
 
