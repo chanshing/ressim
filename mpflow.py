@@ -194,10 +194,10 @@ def convecti(grid, v):
     nx, ny = grid.nx, grid.ny
     n = grid.ncell
 
-    xn = minimum(v['x'], 0); x1 = xn[:,:,0:nx].reshape(n)
-    yn = minimum(v['y'], 0); y1 = yn[:,0:ny,:].reshape(n)
-    xp = maximum(v['x'], 0); x2 = xp[:,:,1:nx+1].reshape(n)
-    yp = maximum(v['y'], 0); y2 = yp[:,1:ny+1,:].reshape(n)
+    xn = minimum(v['x'], 0); x1 = xn[:,0:nx].reshape(n)
+    yn = minimum(v['y'], 0); y1 = yn[0:ny,:].reshape(n)
+    xp = maximum(v['x'], 0); x2 = xp[:,1:nx+1].reshape(n)
+    yp = maximum(v['y'], 0); y2 = yp[1:ny+1,:].reshape(n)
 
     data = [-y2, -x2, x2-x1+y2-y1, x1, y1]
     diags = [-nx, -1, 0, 1, nx]
