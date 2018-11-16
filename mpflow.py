@@ -124,7 +124,7 @@ class BaseSolver(object):
         assert numpy.all(phi >= 0) and numpy.all(phi <= 1), "Porosity not in [0,1]"
         self.__phi = phi
 
-class PressureSolver(object):
+class PressureSolver(BaseSolver):
     """
     Solver for the pressure equation.
 
@@ -171,28 +171,7 @@ class PressureSolver(object):
 
         if diri is None:
             # defaults to zero at center of the grid
-            n = self.grid.ncell
-            self.diri = [(int(n/2), 0.0)]
-
-        self.p, self.v = None, None
-
-    @property
-    def k(self):
-        return self.__k
-
-    @k.setter
-    def k(self, k):
-        assert numpy.all(k > 0), "Encountered non-positive permeability. Perhaps forgot to exp(k)?"
-        self.__k = k
-
-    @property
-    def lamb(self):
-        return self.__mobi
-
-    @lamb.setter
-    def lamb(self, lamb):
-        assert numpy.all(lamb > 0), "Encountered non-positive mobility"
-        self.__mobi = lamb
+            self.diri = [(int(self.grid.ncell/2), 0.0)]
 
     def step(self):
         grid, k = self.grid, self.k
@@ -210,15 +189,16 @@ class PressureSolver(object):
 
         # pressure
         p = spsolve(mat, q)
-        p = p.reshape(ny, nx)
+        p = p.reshape(*grid.shape)
         # flux
         v = {'x':zeros((ny,nx+1)), 'y':zeros((ny+1,nx))}
         v['x'][:,1:nx] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
         v['y'][1:ny,:] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
 
-        self.p, self.v = p, v  # update p, v
+        # update self.p, self.v
+        self.p, self.v = p, v
 
-class SaturationSolver(object):
+class SaturationSolver(BaseSolver):
     def __init__(self, grid, q, phi, s, f_fn, v=None):
         self.grid, self.q, self.phi, self.s, self.f_fn = grid, q, phi, s, f_fn
         self.v = v
@@ -248,7 +228,8 @@ class SaturationSolver(object):
             return s1 - s + alpha * (mat.dot(frac) - qw)
         sol = optimize.root(residual, x0=s, method='krylov')
 
-        self.s = sol.x.reshape(grid.ny, grid.nx)  # update s
+        # clip to ensure solution in [0,1]; update self.s
+        self.s = numpy.clip(sol.x.reshape(*grid.shape), 0., 1.)
 
 def transmi(grid, k):
     """ construct transmisibility matrix """
