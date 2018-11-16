@@ -32,6 +32,7 @@ class Grid(object):
         self.nx, self.ny = nx, ny
         self.lx, self.ly = float(lx), float(ly)
 
+        self.shape = (ny, nx)
         self.ncell = nx*ny
         self.dx, self.dy = self.lx/nx, self.ly/ny
         self.vol = self.dx*self.dy
@@ -94,7 +95,7 @@ class PressureSolver(object):
 
     @k.setter
     def k(self, k):
-        assert numpy.all(k > 0), "Encountered negative permeability. Perhaps forgot to exp(k)?"
+        assert numpy.all(k > 0), "Encountered non-positive permeability. Perhaps forgot to exp(k)?"
         self.__k = k
 
     @property
@@ -103,7 +104,7 @@ class PressureSolver(object):
 
     @mobi.setter
     def mobi(self, mobi):
-        assert numpy.all(mobi > 0), "Encountered negative mobility"
+        assert numpy.all(mobi > 0), "Encountered non-positive mobility"
         self.__mobi = mobi
 
     def step(self):
@@ -131,8 +132,9 @@ class PressureSolver(object):
         self.p, self.v = p, v  # update p, v
 
 class SaturationSolver(object):
-    def __init__(self, s, grid, v, q, phi, frac_fn=None):
-        self.s, self.grid, self.v, self.q, self.phi = s, grid, v, q, phi
+    def __init__(self, s, grid, q, phi, v=None, frac_fn=None):
+        self.s, self.grid, self.q, self.phi = s, grid, v, q, phi
+        self.v = v
 
         if frac_fn is None:
             # single phase flow
@@ -144,7 +146,8 @@ class SaturationSolver(object):
         return maximum(q) + frac*minimum(q)
 
     def step(self, dt):
-        s, grid, v, q, phi = self.s, self.grid, self.v, self.q, self.phi
+        s, grid, q, phi = self.s, self.grid, self.v, self.q, self.phi
+        v = self.v
         frac_fn = self.frac_fn
 
         alpha = float(dt) / (grid.vol * phi)
