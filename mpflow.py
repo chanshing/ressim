@@ -75,10 +75,6 @@ class PressureSolver(object):
     -------
     step() :
         Main method that solves the pressure equation to obtain pressure and flux, stored at self.p and self.v
-
-    update(**params) :
-        Update parameters of the solver. Use to update s (saturation) during transient multiphase flow simulations, e.g. update(s=s_new)
-
     """
     def __init__(self, grid, k, q, diri=None, mobi_fn=None, s=None):
         self.grid, self.k, self.q = grid, k, q
@@ -107,17 +103,15 @@ class PressureSolver(object):
             n = self.grid.ncell
             self.__diri = [(int(n/2), 0.0)]
 
-    def update(self, **params):
-        self.__dict__.update(params)
-
     def step(self):
         grid, k = self.grid, self.k
         mobi_fn, s = self.mobi_fn, self.s
+
         nx, ny = grid.nx, grid.ny
 
         if mobi_fn is not None and s is not None:
             mw, mo = mobi_fn(s)
-            k = k * (mw + mo).reshape(ny, nx)
+            k = k * (mw + mo).reshape(*k.shape)
         else:
             warnings.warn('Undefined mobility. Solving as single phase flow...')
 
@@ -135,12 +129,16 @@ class PressureSolver(object):
 
         self.p, self.v = p, v
 
+# def SaturationSolver(object):
+#     def __init__(self, grid, v, q, mobi_fn, s_init=None):
+
 def transmi(grid, k):
     """ construct transmisibility matrix """
     nx, ny = grid.nx, grid.ny
     dx, dy = grid.dx, grid.dy
     n = grid.ncell
 
+    k = k.reshape(ny, nx)
     kinv = 1.0/k
 
     ax = 2*dy/dx; tx = zeros((ny,nx+1))
