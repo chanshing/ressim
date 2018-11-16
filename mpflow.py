@@ -51,11 +51,13 @@ class PressureSolver(object):
         Integrated source term.
 
     diri : list of (int, float) tuples, optional
-        Dirichlet boundary conditions, e.g. [(i1, val1), (i2, val2), ...] means pressure values val1 at cell i1, val2 at cell i2, etc.
-        Defaults to [(ny*nx/2, 0.0)], i.e. zero pressure at center of the grid.
+        Dirichlet boundary conditions, e.g. [(i1, val1), (i2, val2), ...]
+        means pressure values val1 at cell i1, val2 at cell i2, etc. Defaults
+        to [(ny*nx/2, 0.0)], i.e. zero pressure at center of the grid.
 
     mobi : ndarray, shape (ny, nx) | (ny*nx,) OR float, optional
-        Total mobility. If float, mobility is uniform in the domain.
+        Total mobility. A single float means mobility is uniform in the
+        domain. Defaults to 1.0
 
     Attributes
     ----------
@@ -71,9 +73,10 @@ class PressureSolver(object):
     Methods
     -------
     step() :
-        Main method that solves the pressure equation to obtain pressure and flux, stored at self.p and self.v
+        Main method that solves the pressure equation to obtain pressure and
+        flux, stored at self.p and self.v
     """
-    def __init__(self, grid, k, q, diri=None, mobi=None):
+    def __init__(self, grid, k, q, mobi=1.0, diri=None):
         self.grid, self.k, self.q = grid, k, q
         self.diri = diri
         self.mobi = mobi
@@ -107,9 +110,8 @@ class PressureSolver(object):
         nx, ny = grid.nx, grid.ny
 
         if isinstance(mobi, numpy.ndarray):
-            k = k * mobi.reshape(*k.shape)
-        else:
-            k = k * mobi
+            mobi = mobi.reshape(*k.shape)
+        k = k * mobi
 
         mat, tx, ty = transmi(grid, k)
         q = copy(self.q).ravel()
@@ -126,7 +128,7 @@ class PressureSolver(object):
         self.p, self.v = p, v
 
 # def SaturationSolver(object):
-#     def __init__(self, grid, v, q, mobi, s_init=None):
+#     def __init__(self, grid, v, q, s_init=None, frac_fn=None, **frac_kws):
 
 def transmi(grid, k):
     """ construct transmisibility matrix """
