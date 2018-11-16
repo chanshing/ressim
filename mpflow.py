@@ -132,8 +132,8 @@ class PressureSolver(object):
         self.p, self.v = p, v  # update p, v
 
 class SaturationSolver(object):
-    def __init__(self, s, grid, q, phi, v=None, frac_fn=None):
-        self.s, self.grid, self.q, self.phi = s, grid, v, q, phi
+    def __init__(self, grid, q, phi, s, v=None, frac_fn=None):
+        self.grid, self.q, self.phi, self.s = grid, v, q, phi, s
         self.v = v
 
         if frac_fn is None:
@@ -146,7 +146,7 @@ class SaturationSolver(object):
         return maximum(q) + frac*minimum(q)
 
     def step(self, dt):
-        s, grid, q, phi = self.s, self.grid, self.v, self.q, self.phi
+        grid, q, phi, s = self.grid, self.v, self.q, self.phi, self.s
         v = self.v
         frac_fn = self.frac_fn
 
