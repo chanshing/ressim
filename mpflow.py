@@ -1,10 +1,7 @@
-import numpy
-from numpy import array, asarray, copy, zeros, ones, maximum, minimum
+import numpy as np
 from scipy.sparse import spdiags
 from scipy.sparse.linalg import spsolve
 from scipy import optimize
-
-import warnings
 
 import utils
 
@@ -77,15 +74,18 @@ class Grid(object):
         self.__ly = float(ly)
         self.update()
 
-class BaseSolver(object):
+class Parameters(object):
+    """
+    Container for equation paremeters along with basic checks.
+    """
+
+    @property
+    def grid(self):
+        return self.__grid
 
     @property
     def k(self):
         return self.__k
-
-    @property
-    def lamb(self):
-        return self.__lamb
 
     @property
     def q(self):
@@ -99,37 +99,78 @@ class BaseSolver(object):
     def phi(self):
         return self.__phi
 
+    @property
+    def v(self):
+        return self.__v
+
+    @property
+    def lamb_fn(self):
+        return self.__lamb_fn
+
+    @property
+    def f_fn(self):
+        return self.__f_fn
+
+    @grid.setter
+    def grid(self, grid):
+        if grid is not None:
+            assert isinstance(grid, Grid)
+            self.__grid = grid
+
     @k.setter
     def k(self, k):
-        assert numpy.all(k > 0), "Non-positive permeability. Perhaps forgot to exp(k)?"
-        self.__k = k
-
-    @lamb.setter
-    def lamb(self, lamb):
-        assert numpy.all(lamb > 0), "Non-positive mobility"
-        self.__lamb = lamb
+        if k is not None:
+            # assert isinstance(k, np.ndarray)
+            assert np.all(k > 0), "Non-positive permeability. Perhaps forgot to exp(k)?"
+            self.__k = k
 
     @q.setter
     def q(self, q):
-        assert numpy.sum(q) == 0, "Unbalanced source term"
-        self.__q = q
+        if q is not None:
+            # assert isinstance(q, np.ndarray)
+            assert np.sum(q) == 0, "Unbalanced source term"
+            self.__q = q
 
     @s.setter
     def s(self, s):
-        assert numpy.all(s >= 0) and numpy.all(s <= 1), "Saturation not in [0,1]"
-        self.__s = s
+        if s is not None:
+            # assert isinstance(s, np.ndarray)
+            assert np.all(s >= 0) and np.all(s <= 1), "Saturation not in [0,1]"
+            self.__s = s
 
     @phi.setter
     def phi(self, phi):
-        assert numpy.all(phi >= 0) and numpy.all(phi <= 1), "Porosity not in [0,1]"
-        self.__phi = phi
+        if phi is not None:
+            # assert isinstance(phi, np.ndarray)
+            assert np.all(phi >= 0) and np.all(phi <= 1), "Porosity not in [0,1]"
+            self.__phi = phi
 
-class PressureSolver(BaseSolver):
+    @v.setter
+    def v(self, v):
+        if v is not None:
+            assert isinstance(v, dict)
+            # assert isinstance(v['x'], np.ndarray)
+            # assert isinstance(v['y'], np.ndarray)
+            self.__v = v
+
+    @lamb_fn.setter
+    def lamb_fn(self, lamb_fn):
+        if lamb_fn is not None:
+            assert callable(lamb_fn)
+            self.__lamb_fn = lamb_fn
+
+    @f_fn.setter
+    def f_fn(self, f_fn):
+        if f_fn is not None:
+            assert callable(f_fn)
+            self.__f_fn = f_fn
+
+class PressureEquation(Parameters):
     """
-    Solver for the pressure equation.
+    Pressure equation with no-flux boundary conditions
 
-    Parameters
-    ----------
+    Inputs
+    ------
     grid :
         Grid object defining the domain
 
@@ -139,17 +180,24 @@ class PressureSolver(BaseSolver):
     q : ndarray, shape (ny, nx) | (ny*nx,)
         Integrated source term.
 
-    diri : list of (int, float) tuples, optional
+    diri : list of (int, float) tuples
         Dirichlet boundary conditions, e.g. [(i1, val1), (i2, val2), ...]
         means pressure values val1 at cell i1, val2 at cell i2, etc. Defaults
         to [(ny*nx/2, 0.0)], i.e. zero pressure at center of the grid.
 
-    lamb : ndarray, shape (ny, nx) | (ny*nx,) OR float, optional
+    lamb : ndarray, shape (ny, nx) | (ny*nx,) OR float
         Total mobility. A single float means mobility is uniform in the
         domain. Defaults to 1.0
 
-    Attributes
-    ----------
+    lamb_fn : callable
+        Total mobility function. If provided, it overrides lamb value with
+        lamb_fn(s). Saturation s must be defined.
+
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
+
+    Computes
+    --------
     p : ndarray, shape (ny, nx)
         Pressure
 
@@ -165,48 +213,72 @@ class PressureSolver(BaseSolver):
         Main method that solves the pressure equation to obtain pressure and
         flux, stored at self.p and self.v
     """
-    def __init__(self, grid, k, q, lamb=1.0, diri=None):
-        self.grid, self.k, self.q = grid, k, q
+    def __init__(self, grid=None, q=None, k=None, diri=None, lamb=1.0, lamb_fn=None, s=None):
+        self.grid, self.q, self.k = grid, q, k
+        self.diri = diri
         self.lamb = lamb
+        self.lamb_fn = lamb_fn
+        self.s = s
 
-        if diri is None:
-            # defaults to zero at center of the grid
-            self.diri = [(int(self.grid.ncell/2), 0.0)]
+    @property
+    def diri(self):
+        """ Default to zero at center of the grid """
+        if self.__diri is None:
+            return [(int(self.grid.ncell/2), 0.0)]
+        return self.__diri
+
+    @property
+    def lamb(self):
+        """ Override lamb with lamb_fn(s) if available. NOTE: referencing
+        self.lamb may be expensive if lamb_fn is present. """
+        if hasattr(self, 'lamb_fn'):
+            self.lamb = self.lamb_fn(self.s)  # triggers check
+        return self.__lamb
+
+    @diri.setter
+    def diri(self, diri):
+        self.__diri = diri
+
+    @lamb.setter
+    def lamb(self, lamb):
+        if lamb is not None:
+            assert np.all(lamb >= 0) and np.all(lamb <= 1), "Mobility not in [0,1]"
+            self.__lamb = lamb
 
     def step(self):
-        grid, k = self.grid, self.k
+        grid, q, k = self.grid, self.q, self.k
+        diri = self.diri
         lamb = self.lamb
 
         nx, ny = grid.nx, grid.ny
 
-        if isinstance(lamb, numpy.ndarray):
+        if isinstance(lamb, np.ndarray):
             lamb = lamb.reshape(*k.shape)
         k = k * lamb
 
         mat, tx, ty = transmi(grid, k)
-        q = copy(self.q).reshape(grid.ncell)
-        impose_diri(mat, q, self.diri)  # inplace op on mat, q
+        q = np.copy(q).reshape(grid.ncell)
+        impose_diri(mat, q, diri)  # inplace op on mat, q
 
         # pressure
         p = spsolve(mat, q)
         p = p.reshape(*grid.shape)
         # flux
-        v = {'x':zeros((ny,nx+1)), 'y':zeros((ny+1,nx))}
+        v = {'x':np.zeros((ny,nx+1)), 'y':np.zeros((ny+1,nx))}
         v['x'][:,1:nx] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
         v['y'][1:ny,:] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
 
-        # update self.p, self.v
         self.p, self.v = p, v
 
-class SaturationSolver(BaseSolver):
-    def __init__(self, grid, q, phi, s, f_fn, v=None):
+class SaturationEquation(Parameters):
+    def __init__(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None):
         self.grid, self.q, self.phi, self.s, self.f_fn = grid, q, phi, s, f_fn
         self.v = v
 
     @staticmethod
     def qw(q, frac):
         # water injection, mixed production
-        qw = maximum(q,0) + frac*minimum(q,0)
+        qw = np.maximum(q,0) + frac*np.minimum(q,0)
         return qw
 
     def step(self, dt):
@@ -219,7 +291,7 @@ class SaturationSolver(BaseSolver):
 
         s = s.reshape(grid.ncell)
         q = q.reshape(grid.ncell)
-        if isinstance(alpha, numpy.ndarray):
+        if isinstance(alpha, np.ndarray):
             alpha = alpha.reshape(grid.ncenll)
 
         def residual(s1):
@@ -228,8 +300,8 @@ class SaturationSolver(BaseSolver):
             return s1 - s + alpha * (mat.dot(frac) - qw)
         sol = optimize.root(residual, x0=s, method='krylov')
 
-        # clip to ensure solution in [0,1]; update self.s
-        self.s = numpy.clip(sol.x.reshape(*grid.shape), 0., 1.)
+        # clip to ensure solution in [0,1]
+        self.s = np.clip(sol.x.reshape(*grid.shape), 0., 1.)
 
 def transmi(grid, k):
     """ construct transmisibility matrix """
@@ -237,11 +309,11 @@ def transmi(grid, k):
     dx, dy = grid.dx, grid.dy
     n = grid.ncell
 
-    k = k.reshape(ny, nx)
+    k = k.reshape(*grid.shape)
     kinv = 1.0/k
 
-    ax = 2*dy/dx; tx = zeros((ny,nx+1))
-    ay = 2*dx/dy; ty = zeros((ny+1,nx))
+    ax = 2*dy/dx; tx = np.zeros((ny,nx+1))
+    ay = 2*dx/dy; ty = np.zeros((ny+1,nx))
 
     tx[:,1:nx] = ax/(kinv[:,0:nx-1]+kinv[:,1:nx])
     ty[1:ny,:] = ay/(kinv[0:ny-1,:]+kinv[1:ny,:])
@@ -260,10 +332,10 @@ def convecti(grid, v):
     nx, ny = grid.nx, grid.ny
     n = grid.ncell
 
-    xn = minimum(v['x'], 0); x1 = xn[:,0:nx].reshape(n)
-    yn = minimum(v['y'], 0); y1 = yn[0:ny,:].reshape(n)
-    xp = maximum(v['x'], 0); x2 = xp[:,1:nx+1].reshape(n)
-    yp = maximum(v['y'], 0); y2 = yp[1:ny+1,:].reshape(n)
+    xn = np.minimum(v['x'], 0); x1 = xn[:,0:nx].reshape(n)
+    yn = np.minimum(v['y'], 0); y1 = yn[0:ny,:].reshape(n)
+    xp = np.maximum(v['x'], 0); x2 = xp[:,1:nx+1].reshape(n)
+    yp = np.maximum(v['y'], 0); y2 = yp[1:ny+1,:].reshape(n)
 
     data = [-y2, -x2, x2-x1+y2-y1, x1, y1]
     diags = [-nx, -1, 0, 1, nx]
