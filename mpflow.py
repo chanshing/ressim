@@ -14,7 +14,7 @@ class Grid(object):
     nx, ny : int, int
         Grid resolution
     lx, ly : float, float, optional
-        Grid physical dimensions. Defaults to lx=1.0, ly=1.0 (unit square)
+        Grid physical dimensions. (default lx=1.0, ly=1.0, i.e. unit square)
 
     Attributes
     ----------
@@ -167,31 +167,26 @@ class Parameters(object):
 
 class PressureEquation(Parameters):
     """
-    Pressure equation with no-flux boundary conditions
+    Pressure equation
 
-    Inputs
-    ------
+    Parameters
+    ----------
     grid :
         Grid object defining the domain
 
-    k : ndarray, shape (ny, nx)
-        Permeability
-
     q : ndarray, shape (ny, nx) | (ny*nx,)
         Integrated source term.
+
+    k : ndarray, shape (ny, nx)
+        Permeability
 
     diri : list of (int, float) tuples
         Dirichlet boundary conditions, e.g. [(i1, val1), (i2, val2), ...]
         means pressure values val1 at cell i1, val2 at cell i2, etc. Defaults
         to [(ny*nx/2, 0.0)], i.e. zero pressure at center of the grid.
 
-    lamb : ndarray, shape (ny, nx) | (ny*nx,) OR float
-        Total mobility. A single float means mobility is uniform in the
-        domain. Defaults to 1.0
-
     lamb_fn : callable
-        Total mobility function. If provided, it overrides lamb value with
-        lamb_fn(s). Saturation s must be defined.
+        Total mobility function. Saturation s must be defined.
 
     s : ndarray, shape (ny, nx) | (ny*nx,)
         Saturation
@@ -213,10 +208,9 @@ class PressureEquation(Parameters):
         Main method that solves the pressure equation to obtain pressure and
         flux, stored at self.p and self.v
     """
-    def __init__(self, grid=None, q=None, k=None, diri=None, lamb=1.0, lamb_fn=None, s=None):
+    def __init__(self, grid=None, q=None, k=None, diri=None, lamb_fn=None, s=None):
         self.grid, self.q, self.k = grid, q, k
         self.diri = diri
-        self.lamb = lamb
         self.lamb_fn = lamb_fn
         self.s = s
 
@@ -227,34 +221,30 @@ class PressureEquation(Parameters):
             return [(int(self.grid.ncell/2), 0.0)]
         return self.__diri
 
-    @property
-    def lamb(self):
-        """ Override lamb with lamb_fn(s) if available. NOTE: referencing
-        self.lamb may be expensive if lamb_fn is present. """
-        if hasattr(self, 'lamb_fn'):
-            self.lamb = self.lamb_fn(self.s)  # triggers check
-        return self.__lamb
+    # @property
+    # def lamb(self):
+    #     """ Override lamb with lamb_fn(s) if available. NOTE: referencing
+    #     self.lamb may be expensive if lamb_fn is present. """
+    #     if hasattr(self, 'lamb_fn'):
+    #         self.lamb = self.lamb_fn(self.s)  # triggers check
+    #     return self.__lamb
 
     @diri.setter
     def diri(self, diri):
         self.__diri = diri
 
-    @lamb.setter
-    def lamb(self, lamb):
-        if lamb is not None:
-            assert np.all(lamb >= 0) and np.all(lamb <= 1), "Mobility not in [0,1]"
-            self.__lamb = lamb
+    # @lamb.setter
+    # def lamb(self, lamb):
+    #     if lamb is not None:
+    #         assert np.all(lamb >= 0) and np.all(lamb <= 1), "Mobility not in [0,1]"
+    #         self.__lamb = lamb
 
     def step(self):
         grid, q, k = self.grid, self.q, self.k
         diri = self.diri
-        lamb = self.lamb
 
-        nx, ny = grid.nx, grid.ny
-
-        if isinstance(lamb, np.ndarray):
-            lamb = lamb.reshape(*k.shape)
-        k = k * lamb
+        if hasattr(self, 'lamb_fn'):
+            k = k * self.lamb_fn(self.s).reshape(*grid.shape)
 
         mat, tx, ty = transmi(grid, k)
         q = np.copy(q).reshape(grid.ncell)
@@ -264,6 +254,7 @@ class PressureEquation(Parameters):
         p = spsolve(mat, q)
         p = p.reshape(*grid.shape)
         # flux
+        nx, ny = grid.nx, grid.ny
         v = {'x':np.zeros((ny,nx+1)), 'y':np.zeros((ny+1,nx))}
         v['x'][:,1:nx] = (p[:,0:nx-1]-p[:,1:nx])*tx[:,1:nx]
         v['y'][1:ny,:] = (p[0:ny-1,:]-p[1:ny,:])*ty[1:ny,:]
@@ -271,6 +262,45 @@ class PressureEquation(Parameters):
         self.p, self.v = p, v
 
 class SaturationEquation(Parameters):
+    """
+    Saturation equation
+
+    Parameters
+    ----------
+    grid :
+        Grid object defining the domain
+
+    q : ndarray, shape (ny, nx) | (ny*nx,)
+        Integrated source term.
+
+    phi : ndarray, shape (ny, nx) | (ny*nx,)
+        Porosity
+
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
+
+    f_fn : callable
+        Fractional flow (of water) function
+
+    v : dict of ndarray
+        'x' : ndarray, shape (ny, nx+1)
+            Flux in x-direction
+        'y' : ndarray, shape (ny+1, nx)
+            Flux in y-direction
+
+    Computes
+    --------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation is updated with step()
+
+    Methods
+    -------
+    step(dt) :
+        Main method to forward saturation in time by dt. Updates self.s
+
+    qw(q, frac) :
+        Returns water source term
+    """
     def __init__(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None):
         self.grid, self.q, self.phi, self.s, self.f_fn = grid, q, phi, s, f_fn
         self.v = v
