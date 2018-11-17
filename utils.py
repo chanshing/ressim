@@ -1,3 +1,4 @@
+import numpy
 import scipy
 
 def csr_row_set_nz_to_val(csr, row, value=0):
@@ -48,7 +49,9 @@ class LinearMobility(BaseMobility):
     def __call__(self, s):
         _s = (s-self.swc)/(1.0-self.swc-self.sor)
         lamb_w = _s/self.vw
-        lamb_o = 1.0-_s/self.vo
+        lamb_o = (1.0-_s)/self.vo
+        # clip to ensure within [0,1]
+        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
         return lamb_w, lamb_o
 
 class QuadraticMobility(BaseMobility):
@@ -56,4 +59,6 @@ class QuadraticMobility(BaseMobility):
         _s = (s-self.swc)/(1.0-self.swc-self.sor)
         lamb_w = _s**2/self.vw
         lamb_o = (1.0-_s)**2/self.vo
+        # clip to ensure within [0,1]
+        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
         return lamb_w, lamb_o
