@@ -46,19 +46,47 @@ class BaseMobility(object):
         self.__sor = float(sor)
 
 class LinearMobility(BaseMobility):
-    def __call__(self, s):
+    def __call__(self, s, deriv=False):
         _s = (s-self.swc)/(1.0-self.swc-self.sor)
         lamb_w = _s/self.vw
         lamb_o = (1.0-_s)/self.vo
         # clip to ensure within [0,1]
         lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
+
+        if deriv:
+            dlamb_w = 1.0/(self.vw*(1.0-self.swc-self.sor))
+            dlamb_o = -1.0/(self.vo*(1.0-self.swc-self.sor))
+            return lamb_w, lamb_o, dlamb_w, dlamb_o
+
         return lamb_w, lamb_o
 
 class QuadraticMobility(BaseMobility):
-    def __call__(self, s):
+    def __call__(self, s, deriv=False):
         _s = (s-self.swc)/(1.0-self.swc-self.sor)
         lamb_w = _s**2/self.vw
         lamb_o = (1.0-_s)**2/self.vo
+        # clip to ensure within [0,1]
+        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
+
+        if deriv:
+            dlamb_w = 2.0*_s/(self.vw*(1.0-self.swc-self.sor)) 
+            dlamb_o = -2.0*(1.0-_s)/(self.vo*(1.0-self.swc-self.sor))
+            return lamb_w, lamb_o, dlamb_w, dlamb_o
+
+        return lamb_w, lamb_o
+
+def linear_mobility(s, vw, vo, swc, sor):
+        _s = (s-swc)/(1.0-swc-sor)
+        lamb_w = _s/vw
+        lamb_o = (1.0-_s)/vo
+        # clip to ensure within [0,1]
+        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
+        return lamb_w, lamb_o
+
+def quadratic_mobility(s, vw, vo, swc, sor):
+        _s = (s-swc)/(1.0-swc-sor)
+        lamb_w = _s**2/vw
+        lamb_o = (1.0-_s)**2/vo
         # clip to ensure within [0,1]
         lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
         return lamb_w, lamb_o
