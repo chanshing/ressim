@@ -144,7 +144,7 @@ class Parameters(object):
     def s(self, s):
         if s is not None:
             assert isinstance(s, np.ndarray)
-            assert np.all(s >= 0) and np.all(s <= 1), "Saturation not in [0,1]"
+            assert np.all(s >= 0) and np.all(s <= 1), "Water saturation not in [0,1]"
             self.__s = s
 
     @phi.setter
@@ -198,7 +198,7 @@ class PressureEquation(Parameters):
         Total mobility function lamb_fn(s)
 
     s : ndarray, shape (ny, nx) | (ny*nx,)
-        Saturation
+        Water saturation
 
     p : ndarray, shape (ny, nx)
         Pressure
@@ -264,7 +264,7 @@ class PressureEquation(Parameters):
 
 class SaturationEquation(Parameters):
     """
-    Saturation equation
+    Water saturation equation
 
     Attributes
     ----------
@@ -292,7 +292,7 @@ class SaturationEquation(Parameters):
         the jacobian is approximated by the solver (which can be slow).
 
     s : ndarray, shape (ny, nx) | (ny*nx,)
-        Saturation
+        Water saturation
 
     Methods
     -------
