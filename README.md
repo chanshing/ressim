@@ -7,7 +7,7 @@ Reservoir simulation in Python. It currently supports 2D rectangular grids and i
 - `utils.py`: contains useful functions e.g. linear and quadratic mobility functions, fractional flow function, etc.
 
 ## Usage
-See `main_*.py` for examples
+See `main_*.py` for examples.
 
 # `ressim.py`
 A module for reservoir simulation in Python.
@@ -44,7 +44,7 @@ PressureEquation(self, grid=None, q=None, k=None, diri=None, lamb_fn=None, s=Non
 
 A class to model and solve the pressure equation:
 
-![pressure](https://i.imgur.com/PLoJ0bj.gif).
+![pressure](https://i.imgur.com/PLoJ0bj.gif)
 
 
 __Attributes__
