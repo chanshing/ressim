@@ -4,7 +4,7 @@ Reservoir simulation in Python. It currently supports 2D rectangular grids and i
 ## Modules
 - `ressim.py`: main module containing classes to define the grid, and to model and solve the pressure and saturation equations.
 
-- `utils.py`: contains useful functions e.g. linear and quadratic mobility functions, fractional flow function, etc.
+- `utils.py`: a module containing useful function definitions, e.g. linear and quadratic mobility functions, fractional flow function, etc.
 
 ## Usage
 See `main_*.py` for examples.
@@ -68,7 +68,7 @@ __Attributes__
     Total mobility function `lamb_fn(s)`
 
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `p`: `ndarray, (ny, nx)`
     Pressure
@@ -96,7 +96,7 @@ SaturationEquation(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None,
 ```
 A class to model and solve the (water) saturation equation under water injection,
 
-![Saturation](https://i.imgur.com/qswqrcK.gif)
+![Water saturation](https://i.imgur.com/qswqrcK.gif)
 
 __Attributes__
 - `grid`: `Grid`
@@ -123,7 +123,7 @@ __Attributes__
     the jacobian is approximated by the solver (which can be slow).
 
 - `s` : `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 __Methods__
 - `step(dt)`:
@@ -146,7 +146,7 @@ Function to compute water and oil mobility with a *linear* model.
 __Parameters__
 
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `vw`: `float`
     Viscosity of water
@@ -185,7 +185,7 @@ Function to compute water and oil mobility with a *quadratic* model.
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `vw`: `float`
     Viscosity of water
@@ -224,7 +224,7 @@ Water fractional flow function.
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `mobi_fn`: `callable`
     Mobility function `lamb_w, lamb_o = mobi_fn(s)` where:
@@ -243,7 +243,7 @@ Derivative function (element-wise) of water fractional flow.
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `mobi_fn`: `callable`
     Mobility function `lamb_w, lamb_o, dlamb_w, dlamb_o = mobi_fn(s, deriv=True)` where:
@@ -264,7 +264,7 @@ Total mobility function.
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
-    Saturation
+    Water saturation
 
 - `mobi_fn`: `callable`
     Mobility function `lamb_w, lamb_o = mobi_fn(s)` where:
