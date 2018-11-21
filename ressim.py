@@ -25,6 +25,9 @@ class Grid(object):
 
     ncell : int
         number of cells
+
+    shape : int
+        grid shape, i.e. (ny, nx)
     """
     def __init__(self, nx, ny, lx=1.0, ly=1.0):
         self.nx, self.ny = nx, ny
