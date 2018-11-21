@@ -95,9 +95,12 @@ __Methods__
 SaturationEquation(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None, df_fn=None)
 ```
 
+<<<<<<< HEAD
 A class to model and solve the (water) saturation equation under water injection,
 
 ![Saturation](https://i.imgur.com/qswqrcK.gif)
+
+i.e. water injection.
 
 __Attributes__
 - `grid`: `Grid`
