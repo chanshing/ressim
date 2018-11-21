@@ -4,7 +4,7 @@ Reservoir simulation in Python. It currently supports 2D rectangular grids and i
 ## Modules
 - `ressim.py`: main module containing classes to define the grid, and to model and solve the pressure and saturation equations.
 
-- `utils.py`: a module containing useful function definitions, e.g. linear and quadratic mobility functions, fractional flow function, etc.
+- `utils.py`: module containing useful function definitions, e.g. linear and quadratic mobility functions, fractional flow function, etc.
 
 ## Usage
 See `main_*.py` for examples.
