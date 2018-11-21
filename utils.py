@@ -1,92 +1,154 @@
+""" Useful functions for reservoir simulation tasks """
+
 import numpy
-import scipy
 
-def csr_row_set_nz_to_val(csr, row, value=0):
-    """Set all nonzero elements (elements currently in the sparsity pattern)
-    to the given value. Useful to set to 0 mostly.
+def linear_mobility(s, vw, vo, swir, soir, deriv=False):
+    """ Linear mobility model
+
+    Parameters
+    ----------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
+
+    vw : float
+        Viscosity of water
+
+    vo : float
+        Viscosity of oil
+
+    swir : float
+        Irreducible water saturation
+
+    soir : float
+        Irreducible oil saturation
+
+    deriv : bool
+        If True, also return derivatives
+
+    Returns
+    -------
+    if deriv=False,
+    lamb_w, lamb_o : (2x) ndarray, shape (ny, nx) | (ny*nx,)
+        lamb_w : water mobility
+        lamb_o : oil mobility
+
+    if deriv=True,
+    lamb_w, lamb_o, dlamb_w, dlamb_o : (4x) ndarray, shape (ny, nx) | (ny*nx,)
+        lamb_w : water mobility
+        lamb_o : oil mobility
+        dlamb_w : derivative of water mobility
+        dlamb_o : derivative of oil mobility
     """
-    if not isinstance(csr, scipy.sparse.csr_matrix):
-        raise ValueError('Matrix given must be of CSR format.')
-    csr.data[csr.indptr[row]:csr.indptr[row+1]] = value
+    vw, vo, swir, soir = float(vw), float(vo), float(swir), float(soir)
+    _s = (s-swir)/(1.0-swir-soir)
+    lamb_w = _s/vw
+    lamb_o = (1.0-_s)/vo
+    lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)  # clip to ensure within [0,1]
 
-class BaseMobility(object):
-    def __init__(self, vw=1.0, vo=1.0, swc=0.0, sor=0.0):
-        self.vw, self.vo, self.swc, self.sor = vw, vo, swc, sor
+    if deriv:
+        dlamb_w = 1.0/(vw*(1.0-swir-soir))
+        dlamb_o = -1.0/(vo*(1.0-swir-soir))
+        return lamb_w, lamb_o, dlamb_w, dlamb_o
 
-    @property
-    def vw(self):
-        return self.__vw
+    return lamb_w, lamb_o
 
-    @property
-    def vo(self):
-        return self.__vo
+def quadratic_mobility(s, vw, vo, swir, soir, deriv=False):
+    """ Quadratic mobility model
 
-    @property
-    def swc(self):
-        return self.__swc
+    Parameters
+    ----------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
 
-    @property
-    def sor(self):
-        return self.__sor
+    vw : float
+        Viscosity of water
 
-    @vw.setter
-    def vw(self, vw):
-        self.__vw = float(vw)
+    vo : float
+        Viscosity of oil
 
-    @vo.setter
-    def vo(self, vo):
-        self.__vo = float(vo)
+    swir : float
+        Irreducible water saturation
 
-    @swc.setter
-    def swc(self, swc):
-        self.__swc = float(swc)
+    soir : float
+        Irreducible oil saturation
 
-    @sor.setter
-    def sor(self, sor):
-        self.__sor = float(sor)
+    deriv : bool
+        If True, also return derivatives
 
-class LinearMobility(BaseMobility):
-    def __call__(self, s, deriv=False):
-        _s = (s-self.swc)/(1.0-self.swc-self.sor)
-        lamb_w = _s/self.vw
-        lamb_o = (1.0-_s)/self.vo
-        # clip to ensure within [0,1]
-        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
+    Returns
+    -------
+    if deriv=False,
+    lamb_w, lamb_o : (2x) ndarray, shape (ny, nx) | (ny*nx,)
+        lamb_w : water mobility
+        lamb_o : oil mobility
 
-        if deriv:
-            dlamb_w = 1.0/(self.vw*(1.0-self.swc-self.sor))
-            dlamb_o = -1.0/(self.vo*(1.0-self.swc-self.sor))
-            return lamb_w, lamb_o, dlamb_w, dlamb_o
+    if deriv=True,
+    lamb_w, lamb_o, dlamb_w, dlamb_o : (4x) ndarray, shape (ny, nx) | (ny*nx,)
+        lamb_w : water mobility
+        lamb_o : oil mobility
+        dlamb_w : derivative of water mobility
+        dlamb_o : derivative of oil mobility
+    """
 
-        return lamb_w, lamb_o
+    vw, vo, swir, soir = float(vw), float(vo), float(swir), float(soir)
+    _s = (s-swir)/(1.0-swir-soir)
+    lamb_w = _s**2/vw
+    lamb_o = (1.0-_s)**2/vo
+    lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)  # clip to ensure within [0,1]
 
-class QuadraticMobility(BaseMobility):
-    def __call__(self, s, deriv=False):
-        _s = (s-self.swc)/(1.0-self.swc-self.sor)
-        lamb_w = _s**2/self.vw
-        lamb_o = (1.0-_s)**2/self.vo
-        # clip to ensure within [0,1]
-        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
+    if deriv:
+        dlamb_w = 2.0*_s/(vw*(1.0-swir-soir))
+        dlamb_o = -2.0*(1.0-_s)/(vo*(1.0-swir-soir))
+        return lamb_w, lamb_o, dlamb_w, dlamb_o
 
-        if deriv:
-            dlamb_w = 2.0*_s/(self.vw*(1.0-self.swc-self.sor)) 
-            dlamb_o = -2.0*(1.0-_s)/(self.vo*(1.0-self.swc-self.sor))
-            return lamb_w, lamb_o, dlamb_w, dlamb_o
+    return lamb_w, lamb_o
 
-        return lamb_w, lamb_o
+def f_fn(s, mobi_fn):
+    """ Water fractional flow
 
-def linear_mobility(s, vw, vo, swc, sor):
-        _s = (s-swc)/(1.0-swc-sor)
-        lamb_w = _s/vw
-        lamb_o = (1.0-_s)/vo
-        # clip to ensure within [0,1]
-        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
-        return lamb_w, lamb_o
+    Parameters
+    ----------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
 
-def quadratic_mobility(s, vw, vo, swc, sor):
-        _s = (s-swc)/(1.0-swc-sor)
-        lamb_w = _s**2/vw
-        lamb_o = (1.0-_s)**2/vo
-        # clip to ensure within [0,1]
-        lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)
-        return lamb_w, lamb_o
+    mobi_fn : callable
+        Mobility function lamb_w, lamb_o = mobi_fn(s) where:
+            lamb_w : water mobility
+            lamb_o : oil mobility
+    """
+    lamb_w, lamb_o = mobi_fn(s)
+    return lamb_w / (lamb_w + lamb_o)
+
+def df_fn(s, mobi_fn):
+    """ Derivative (element-wise) of water fractional flow
+
+    Parameters
+    ----------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
+
+    mobi_fn : callable
+        Mobility function lamb_w, lamb_o, dlamb_w, dlamb_o = mobi_fn(s, deriv=True) where:
+            lamb_w : water mobility
+            lamb_o : oil mobility
+            dlamb_w : derivative of water mobility
+            dlamb_o : derivative of oil mobility
+    """
+    lamb_w, lamb_o, dlamb_w, dlamb_o = mobi_fn(s, deriv=True)
+    return dlamb_w / (lamb_w + lamb_o) - lamb_w * (dlamb_w + dlamb_o) / (lamb_w + lamb_o)**2
+
+def lamb_fn(s, mobi_fn):
+    """ Total mobility
+
+    Parameters
+    ----------
+    s : ndarray, shape (ny, nx) | (ny*nx,)
+        Saturation
+
+    mobi_fn : callable
+        Mobility function lamb_w, lamb_o = mobi_fn(s) where:
+            lamb_w : water mobility
+            lamb_o : oil mobility
+    """
+    lamb_w, lamb_o = mobi_fn(s)
+    return lamb_w + lamb_o
