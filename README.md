@@ -1,6 +1,11 @@
 # ressim: reservoir simulation in python
 Reservoir simulation in Python. It currently supports 2D rectangular grids and isotropic permeability.
 
+## Modules
+- `ressim.py`: main module containing classes to define the grid, and to model and solve the pressure and saturation equations.
+
+- `utils.py`: contains useful functions e.g. linear and quadratic mobility functions, fractional flow function, etc.
+
 ## Usage
 See `main_*.py` for examples
 
