@@ -46,6 +46,7 @@ A class to model and solve the pressure equation:
 
 ![pressure](https://i.imgur.com/PLoJ0bj.gif)
 
+with no-flow boundary conditions (closed reservoir).
 
 __Attributes__
 
@@ -94,9 +95,11 @@ __Methods__
 SaturationEquation(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None, df_fn=None)
 ```
 
-A class to model and solve the saturation equation:
+A class to model and solve the (water) saturation equation:
 
 ![Saturation](https://i.imgur.com/qswqrcK.gif)
+
+i.e. water injection.
 
 __Attributes__
 - `grid`: `Grid`
