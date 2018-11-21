@@ -94,7 +94,6 @@ __Methods__
 ```python
 SaturationEquation(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None, df_fn=None)
 ```
-
 A class to model and solve the (water) saturation equation under water injection,
 
 ![Saturation](https://i.imgur.com/qswqrcK.gif)
