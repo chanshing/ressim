@@ -56,8 +56,3 @@ for ax, s in zip(axs.ravel(), s_list):
     ax.imshow(s)
     ax.axis('off')
 fig.savefig('saturations.png', bbox_inches=0, pad_inches=0)
-
-plt.figure()
-plt.imshow(s_list[-1])
-plt.colorbar()
-plt.savefig('s.png')
