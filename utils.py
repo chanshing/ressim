@@ -43,7 +43,6 @@ def linear_mobility(s, vw, vo, swir, soir, deriv=False):
     _s = (s-swir)/(1.0-swir-soir)
     lamb_w = _s/vw
     lamb_o = (1.0-_s)/vo
-    lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)  # clip to ensure within [0,1]
 
     if deriv:
         dlamb_w = 1.0/(vw*(1.0-swir-soir))
@@ -94,7 +93,6 @@ def quadratic_mobility(s, vw, vo, swir, soir, deriv=False):
     _s = (s-swir)/(1.0-swir-soir)
     lamb_w = _s**2/vw
     lamb_o = (1.0-_s)**2/vo
-    lamb_w, lamb_o = numpy.clip(lamb_w, 0., 1.), numpy.clip(lamb_o, 0., 1.)  # clip to ensure within [0,1]
 
     if deriv:
         dlamb_w = 2.0*_s/(vw*(1.0-swir-soir))
