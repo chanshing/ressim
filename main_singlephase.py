@@ -34,13 +34,6 @@ def df_fn(s): return np.ones(len(s))
 solverP = ressim.PressureEquation(grid, q=q, k=k)
 solverS = ressim.SaturationEquation(grid, q=q, phi=phi, s=s0, f_fn=f_fn, df_fn=df_fn)
 
-# (Optional) substitute default saturation solver to use Krylov method. Note:
-# it doesn't use the exact jacobian, instead it is approximated. Still I found
-# it to be faster for single-phase flow problems.
-def solve(residual, s0, residual_jac):
-    return scipy.optimize.root(residual, x0=s0, method='krylov')
-solverS.solve = solve
-
 # solve for 25 timesteps
 nstep=25
 # solve pressure; in single-phase, we only need to solve it once
@@ -63,3 +56,8 @@ for ax, s in zip(axs.ravel(), s_list):
     ax.imshow(s)
     ax.axis('off')
 fig.savefig('saturations.png', bbox_inches=0, pad_inches=0)
+
+plt.figure()
+plt.imshow(s_list[-1])
+plt.colorbar()
+plt.savefig('s.png')

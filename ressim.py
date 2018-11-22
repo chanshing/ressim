@@ -299,9 +299,10 @@ class SaturationEquation(Parameters):
     step(dt) :
         Solve saturation forward in time by dt. Update self.s
 
-    solve(residual, s0, residual_jac=None, **kws) :
+    solve(residual, s0, residual_jac=None) :
         Method to perform the minimization of the residual. Default is
-        scipy.optimize.least_squares(residual, x0=s0, jac=residual_jac, method='trf', tr_solver='lsmr')
+        scipy.optimize.nonlin.nonlin_solve(residual, s0, jacobian=residual_jac).
+        If residual_jac is None, defaults to 'krylov'.
         You can override this method to use a different solver.
     """
     def __init__(self, grid=None, q=None, phi=None, s=None, f_fn=None, v=None, df_fn=None):
@@ -350,13 +351,23 @@ class SaturationEquation(Parameters):
                 dr = eye + (alpha_eye.dot(mat - qn_eye)).dot(df_eye)
                 return dr
 
-        sol = self.solve(residual, s0=s, residual_jac=residual_jac)
-        self.s = np.clip(sol.x.reshape(*grid.shape), 0., 1.)  # clip to ensure within [0,1]
+        s = self.solve(residual, s0=s, residual_jac=residual_jac)
+        self.s = np.clip(s, 0., 1.).reshape(*grid.shape)  # clip to ensure within [0, 1]
+
+    # def solve(self, residual, s0, residual_jac=None):
+    #     if residual_jac is None:
+    #         residual_jac = '2-point'
+    #     sol = scipy.optimize.least_squares(residual, s0, jac=residual_jac, method='trf', tr_solver='lsmr', verbose=0)
+    #     return sol.x
 
     def solve(self, residual, s0, residual_jac=None):
         if residual_jac is None:
-            residual_jac = '2-point'
-        return scipy.optimize.least_squares(residual, x0=s0, jac=residual_jac, method='trf', tr_solver='lsmr')
+            residual_jac = 'krylov'
+        else:
+            # Wrap function into a Jacobian object. See https://github.com/scipy/scipy/blob/master/scipy/optimize/nonlin.py
+            residual_jac = scipy.optimize.nonlin.asjacobian(residual_jac)
+            residual_jac.x = s0
+        return scipy.optimize.nonlin.nonlin_solve(residual, s0, jacobian=residual_jac)
 
 def transmi(grid, k):
     """ Construct transmisibility matrix with two point flux approximation """

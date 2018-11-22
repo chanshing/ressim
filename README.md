@@ -118,7 +118,7 @@ __Attributes__
         Flux in y-direction
 
 - `df_fn`: `callable` (optional)
-    Derivative (element-wise) of water fractional flow function df_fn(s).
+    Derivative (element-wise) of water fractional flow function `df_fn(s)`.
     It is used to compute the jacobian of the residual function. If None,
     the jacobian is approximated by the solver (which can be slow).
 
@@ -129,9 +129,10 @@ __Methods__
 - `step(dt)`:
     Solve saturation forward in time by `dt`. Update `self.s`.
 
-- `solve(residual, s0, residual_jac=None, **kws)`:
+- `solve(residual, s0, residual_jac=None)`:
     Method to perform the minimization of the residual. Default is
-    `scipy.optimize.least_squares(residual, x0=s0, jac=residual_jac, method='trf', tr_solver='lsmr')`.
+    `scipy.optimize.nonlin.nonlin_solve(residual, s0, jacobian=residual_jac)`.
+    If `residual_jac` is `None`, defaults to `'krylov'`.
     You can override this method to use a different solver.
 
 # `utils.py`
