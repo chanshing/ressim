@@ -19,14 +19,14 @@ grid = ressim.Grid(nx=64, ny=64, lx=1.0, ly=1.0)  # unit square, 64x64 grid
 k = np.exp(np.load('perm.npy').reshape(grid.shape))  # load log-permeability, convert to absolute with exp()
 q = np.zeros(grid.shape); q[0,0]=1; q[-1,-1]=-1  # source term: corner-to-corner flow (a.k.a. quarter-five spot)
 
-vw, vo = 1.0, 10.  # viscosities
-swir, soir = 0.2, 0.2  # irreducible saturations
+mu_w, mu_o = 1.0, 10.  # viscosities
+s_wir, s_oir = 0.2, 0.2  # irreducible saturations
 
 phi = np.ones(grid.shape)*0.2  # uniform porosity
-s0 = np.ones(grid.shape) * swir  # initial water saturation equals swir
-dt = 1e-2  # timestep
+s0 = np.ones(grid.shape) * s_wir  # initial water saturation equals s_wir
+dt = 1e-3  # timestep
 
-mobi_fn = functools.partial(utils.quadratic_mobility, vw=vw, vo=vo, swir=swir, soir=soir)  # quadratic mobility model
+mobi_fn = functools.partial(utils.quadratic_mobility, mu_w=mu_w, mu_o=mu_o, s_wir=s_wir, s_oir=s_oir)  # quadratic mobility model
 lamb_fn = functools.partial(utils.lamb_fn, mobi_fn=mobi_fn)  # total mobility function
 f_fn = functools.partial(utils.f_fn, mobi_fn=mobi_fn)  # water fractional flow function
 

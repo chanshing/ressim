@@ -2,7 +2,7 @@
 
 import numpy
 
-def linear_mobility(s, vw, vo, swir, soir, deriv=False):
+def linear_mobility(s, mu_w, mu_o, s_wir, s_oir, deriv=False):
     """ Linear mobility model
 
     Parameters
@@ -10,16 +10,16 @@ def linear_mobility(s, vw, vo, swir, soir, deriv=False):
     s : ndarray, shape (ny, nx) | (ny*nx,)
         Saturation
 
-    vw : float
+    mu_w : float
         Viscosity of water
 
-    vo : float
+    mu_o : float
         Viscosity of oil
 
-    swir : float
+    s_wir : float
         Irreducible water saturation
 
-    soir : float
+    s_oir : float
         Irreducible oil saturation
 
     deriv : bool
@@ -39,19 +39,19 @@ def linear_mobility(s, vw, vo, swir, soir, deriv=False):
         dlamb_w : derivative of water mobility
         dlamb_o : derivative of oil mobility
     """
-    vw, vo, swir, soir = float(vw), float(vo), float(swir), float(soir)
-    _s = (s-swir)/(1.0-swir-soir)
-    lamb_w = _s/vw
-    lamb_o = (1.0-_s)/vo
+    mu_w, mu_o, s_wir, s_oir = float(mu_w), float(mu_o), float(s_wir), float(s_oir)
+    _s = (s-s_wir)/(1.0-s_wir-s_oir)
+    lamb_w = _s/mu_w
+    lamb_o = (1.0-_s)/mu_o
 
     if deriv:
-        dlamb_w = 1.0/(vw*(1.0-swir-soir))
-        dlamb_o = -1.0/(vo*(1.0-swir-soir))
+        dlamb_w = 1.0/(mu_w*(1.0-s_wir-s_oir))
+        dlamb_o = -1.0/(mu_o*(1.0-s_wir-s_oir))
         return lamb_w, lamb_o, dlamb_w, dlamb_o
 
     return lamb_w, lamb_o
 
-def quadratic_mobility(s, vw, vo, swir, soir, deriv=False):
+def quadratic_mobility(s, mu_w, mu_o, s_wir, s_oir, deriv=False):
     """ Quadratic mobility model
 
     Parameters
@@ -59,16 +59,16 @@ def quadratic_mobility(s, vw, vo, swir, soir, deriv=False):
     s : ndarray, shape (ny, nx) | (ny*nx,)
         Saturation
 
-    vw : float
+    mu_w : float
         Viscosity of water
 
-    vo : float
+    mu_o : float
         Viscosity of oil
 
-    swir : float
+    s_wir : float
         Irreducible water saturation
 
-    soir : float
+    s_oir : float
         Irreducible oil saturation
 
     deriv : bool
@@ -89,14 +89,14 @@ def quadratic_mobility(s, vw, vo, swir, soir, deriv=False):
         dlamb_o : derivative of oil mobility
     """
 
-    vw, vo, swir, soir = float(vw), float(vo), float(swir), float(soir)
-    _s = (s-swir)/(1.0-swir-soir)
-    lamb_w = _s**2/vw
-    lamb_o = (1.0-_s)**2/vo
+    mu_w, mu_o, s_wir, s_oir = float(mu_w), float(mu_o), float(s_wir), float(s_oir)
+    _s = (s-s_wir)/(1.0-s_wir-s_oir)
+    lamb_w = _s**2/mu_w
+    lamb_o = (1.0-_s)**2/mu_o
 
     if deriv:
-        dlamb_w = 2.0*_s/(vw*(1.0-swir-soir))
-        dlamb_o = -2.0*(1.0-_s)/(vo*(1.0-swir-soir))
+        dlamb_w = 2.0*_s/(mu_w*(1.0-s_wir-s_oir))
+        dlamb_o = -2.0*(1.0-_s)/(mu_o*(1.0-s_wir-s_oir))
         return lamb_w, lamb_o, dlamb_w, dlamb_o
 
     return lamb_w, lamb_o
