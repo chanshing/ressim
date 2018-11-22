@@ -273,3 +273,6 @@ __Parameters__
 
 __Returns__
 - `ndarray, (ny, nx) | (ny*nx,)` Total mobility
+
+# References
+Aarnes J.E., Gimse T., Lie KA. (2007) An Introduction to the Numerics of Flow in Porous Media using Matlab. In: Hasle G., Lie KA., Quak E. (eds) Geometric Modelling, Numerical Simulation, and Optimization. Springer, Berlin, Heidelberg
