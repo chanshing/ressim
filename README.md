@@ -140,25 +140,27 @@ Useful functions for reservoir simulation tasks.
 
 ## linear_mobility
 ```python
-linear_mobility(s, vw, vo, swir, soir, deriv=False)
+linear_mobility(s, mu_w, mu_o, s_wir, s_oir, deriv=False)
 ```
 Function to compute water and oil mobility with a *linear* model.
+
+![](https://i.imgur.com/kTSiUd4.gif)
 
 __Parameters__
 
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
     Water saturation
 
-- `vw`: `float`
+- `mu_w`: `float`
     Viscosity of water
 
-- `vo`: `float`
+- `mu_o`: `float`
     Viscosity of oil
 
-- `swir`: `float`
+- `s_wir`: `float`
     Irreducible water saturation
 
-- `soir`: `float`
+- `s_oir`: `float`
     Irreducible oil saturation
 
 - `deriv`: `bool`
@@ -180,24 +182,26 @@ __Returns__
 
 ## quadratic_mobility
 ```python
-quadratic_mobility(s, vw, vo, swir, soir, deriv=False)
+quadratic_mobility(s, mu_w, mu_o, s_wir, s_oir, deriv=False)
 ```
 Function to compute water and oil mobility with a *quadratic* model.
+
+![](https://i.imgur.com/DbPnjSk.gif)
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
     Water saturation
 
-- `vw`: `float`
+- `mu_w`: `float`
     Viscosity of water
 
-- `vo`: `float`
+- `mu_o`: `float`
     Viscosity of oil
 
-- `swir`: `float`
+- `s_wir`: `float`
     Irreducible water saturation
 
-- `soir`: `float`
+- `s_oir`: `float`
     Irreducible oil saturation
 
 - `deriv`: `bool`
@@ -221,7 +225,9 @@ __Returns__
 ```python
 f_fn(s, mobi_fn)
 ```
-Water fractional flow function.
+Water fractional flow function. 
+
+![](https://i.imgur.com/2grtPNR.gif)
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
@@ -241,6 +247,8 @@ __Returns__
 df_fn(s, mobi_fn)
 ```
 Derivative function (element-wise) of water fractional flow.
+
+![](https://i.imgur.com/bwz8RQ1.gif)
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
@@ -262,6 +270,8 @@ __Returns__
 lamb_fn(s, mobi_fn)
 ```
 Total mobility function.
+
+![](https://i.imgur.com/YCKjZ8N.gif)
 
 __Parameters__
 - `s`: `ndarray, (ny, nx) | (ny*nx,)`
