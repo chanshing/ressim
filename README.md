@@ -112,14 +112,14 @@ __Attributes__
     Water fractional flow function `f_fn(s)`
 
 - `v`: `dict` of `ndarray`
-    - 'x' : `ndarray, (ny, nx+1)`
+    - `'x'` : `ndarray, (ny, nx+1)`
         Flux in x-direction
-    - 'y' : `ndarray, (ny+1, nx)`
+    - `'y'` : `ndarray, (ny+1, nx)`
         Flux in y-direction
 
 - `df_fn`: `callable` (optional)
     Derivative (element-wise) of water fractional flow function `df_fn(s)`.
-    It is used to compute the jacobian of the residual function. If None,
+    It is used to compute the jacobian of the residual function. If `None`,
     the jacobian is approximated by the solver (which can be slow).
 
 - `s` : `ndarray, (ny, nx) | (ny*nx,)`
@@ -164,7 +164,7 @@ __Parameters__
     Irreducible oil saturation
 
 - `deriv`: `bool`
-    If True, also return derivatives
+    If `True`, also return derivatives
 
 __Returns__
 
@@ -205,7 +205,7 @@ __Parameters__
     Irreducible oil saturation
 
 - `deriv`: `bool`
-    If True, also return derivatives
+    If `True`, also return derivatives
 
 __Returns__
 
