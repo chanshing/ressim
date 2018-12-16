@@ -5,6 +5,8 @@ import scipy.sparse as spa
 import scipy.sparse.linalg
 import scipy.optimize
 
+__all__ = ['Grid', 'Parameters', 'PressureEquation', 'SaturationEquation', 'transmi', 'convecti', 'impose_diri', 'csr_row_set_nz_to_val']
+
 class Grid(object):
     """
     Simple rectangular grid.
