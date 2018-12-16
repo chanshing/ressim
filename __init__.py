@@ -1,2 +1,2 @@
-from ressim import *
-import utils
+from .ressim import *
+from . import utils
